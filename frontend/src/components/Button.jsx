@@ -1,8 +1,13 @@
 import {toast} from "sonner";
 import {useMutation} from "@tanstack/react-query";
+import {useState} from "react";
 
 export default function Button() {
+    const [count] = useState(() => Math.floor(Math.random() * 10000) + 1);
 
+    let genUserId = "user_" + count;
+    const getTime = new Date().toLocaleTimeString();
+    const quantity = 1;
 
     const mutation = useMutation({
 
@@ -10,7 +15,9 @@ export default function Button() {
             return fetch("https://api.learnjavascript.online/demo/react/grades", {
                 method: "POST",
                 body: JSON.stringify({
-                      grade: 15
+                      userId: genUserId,
+                      ticketQuantity: quantity,
+                      time: getTime,
                     }
                 )}).then( response => {
                     if (!response.ok) {
@@ -35,6 +42,7 @@ export default function Button() {
 
         },
         onError: error => {
+
 
             return (
             toast.error("Something went wrong!", { id: 'fetched-data'})
