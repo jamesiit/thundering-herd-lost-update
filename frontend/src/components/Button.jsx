@@ -43,6 +43,9 @@ export default function Button() {
         },
         onError: error => {
 
+            if (error.response?.status === 409) {
+                toast.error("Tickets are sold out!", {id: 'fetched-data'});
+            }
 
             return (
             toast.error("Something went wrong!", { id: 'fetched-data'})
