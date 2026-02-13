@@ -12,12 +12,15 @@ export default function Button() {
     const mutation = useMutation({
 
         mutationFn: data => {
-            return fetch("https://api.learnjavascript.online/demo/react/grades", {
+            return fetch("http://localhost:8080/", {
                 method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
                 body: JSON.stringify({
                       userId: genUserId,
-                      ticketQuantity: quantity,
-                      time: getTime,
+                      clientQuantity: quantity,
+                      clientTime: getTime,
                     }
                 )}).then( response => {
                     if (!response.ok) {
@@ -34,7 +37,7 @@ export default function Button() {
         },
         onSuccess: data => {
 
-            console.log(data.message)
+
 
             return (
                     toast.success("Success!", { id: 'fetched-data'})
