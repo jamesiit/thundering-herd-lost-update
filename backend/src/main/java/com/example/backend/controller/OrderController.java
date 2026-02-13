@@ -34,9 +34,9 @@ public class OrderController {
 
             orderService.createOrder(orderDTO);
 
-            //for testing purposes. There's more functionality to be added here!
-
             Map<String, String> response = new HashMap<>();
+
+
 
             return new ResponseEntity<>(response, HttpStatus.OK);
 
