@@ -12,16 +12,23 @@ export default function Button() {
     const mutation = useMutation({
 
         mutationFn: data => {
-            return fetch("https://api.learnjavascript.online/demo/react/grades", {
+            return fetch("http://localhost:8080/", {
                 method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
                 body: JSON.stringify({
                       userId: genUserId,
-                      ticketQuantity: quantity,
-                      time: getTime,
+                      clientQuantity: quantity,
+                      clientTime: getTime,
                     }
                 )}).then( response => {
                     if (!response.ok) {
-                        throw new Error()
+                        const error = new Error("An error occurred while fetching");
+
+                        error.response = response
+
+                        throw error;
                     }
 
                     return response.json()
@@ -34,8 +41,6 @@ export default function Button() {
         },
         onSuccess: data => {
 
-            console.log(data.message)
-
             return (
                     toast.success("Success!", { id: 'fetched-data'})
             )
@@ -45,6 +50,7 @@ export default function Button() {
 
             if (error.response?.status === 409) {
                 toast.error("Tickets are sold out!", {id: 'fetched-data'});
+                return
             }
 
             return (
