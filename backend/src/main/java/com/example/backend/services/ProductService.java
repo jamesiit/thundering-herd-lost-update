@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 public class ProductService {
 
     ProductRepo productRepo;
-    Product product;
 
     public ProductService(ProductRepo productRepo) {
         this.productRepo = productRepo;
@@ -23,7 +22,25 @@ public class ProductService {
         return productRepo.findById(id).orElse(null);
     }
 
-    public int checkQuantity() {
-        return product.getProdQuantity();
+
+    public Product checkQuantity() {
+        return productRepo.findById(1L).orElse(null);
     }
+
+    public void decrementQuantity(int clientQuantity) {
+
+        Product product = productRepo.findById(1L).orElseThrow();
+
+        try {
+            if (product.getProdQuantity() > 0) {
+                product.setProdQuantity(product.getProdQuantity() - clientQuantity);
+                productRepo.save(product);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
 }
+

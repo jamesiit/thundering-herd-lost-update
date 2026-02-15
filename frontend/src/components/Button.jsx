@@ -24,7 +24,11 @@ export default function Button() {
                     }
                 )}).then( response => {
                     if (!response.ok) {
-                        throw new Error()
+                        const error = new Error("An error occurred while fetching");
+
+                        error.response = response
+
+                        throw error;
                     }
 
                     return response.json()
@@ -37,8 +41,6 @@ export default function Button() {
         },
         onSuccess: data => {
 
-
-
             return (
                     toast.success("Success!", { id: 'fetched-data'})
             )
@@ -48,6 +50,7 @@ export default function Button() {
 
             if (error.response?.status === 409) {
                 toast.error("Tickets are sold out!", {id: 'fetched-data'});
+                return
             }
 
             return (

@@ -2,6 +2,9 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.OrderDTO;
 
+import com.example.backend.model.Order;
+import com.example.backend.model.OrderStatus;
+import com.example.backend.model.Product;
 import com.example.backend.services.OrderService;
 import com.example.backend.services.ProductService;
 import org.springframework.http.HttpStatus;
@@ -20,8 +23,9 @@ public class OrderController {
     private ProductService productService;
 
 
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService, ProductService productService) {
         this.orderService = orderService;
+        this.productService = productService;
     }
 
     // for testing purposes, to check if endpoint works
@@ -34,27 +38,46 @@ public class OrderController {
     @PostMapping("/")
     public ResponseEntity<?> handleOrder(@RequestBody OrderDTO orderDTO) {
 
+        Map<String, HttpStatus> response = new HashMap<>();
+
         try {
 
-            orderService.createOrder(orderDTO);
+            Order createdOrder = orderService.createOrder(orderDTO);
 
-            Map<String, String> response = new HashMap<>();
+            Product product = productService.checkQuantity();
 
-            int checkQuantity = productService.checkQuantity();
+            int getQuantity = product.getProdQuantity();
 
-            if (checkQuantity == 0) {
+            if (getQuantity <= 0) {
+
+                createdOrder.setOrderStatus(OrderStatus.FAILED);
+
+                orderService.updateOrderStatus(createdOrder);
 
                 return new ResponseEntity<>(response, HttpStatus.CONFLICT);
 
             }
 
+            //simulate the order processing wait in real systems like a credit card check
+            Thread.sleep(20);
+
+            productService.decrementQuantity(orderDTO.getClientQuantity());
+
+            //write logic for decrementing. The below line is just so that the function compiles...
+
+            createdOrder.setOrderStatus(OrderStatus.COMPLETED);
+
+            orderService.updateOrderStatus(createdOrder);
+
             return new ResponseEntity<>(response, HttpStatus.OK);
 
+
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+
         }
 
+
     }
-
-
 }

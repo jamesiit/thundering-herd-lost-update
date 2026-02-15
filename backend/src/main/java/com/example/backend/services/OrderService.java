@@ -15,7 +15,7 @@ public class OrderService {
         this.orderRepo = orderRepo;
     }
 
-    public void createOrder(OrderDTO orderDTO) {
+    public Order createOrder(OrderDTO orderDTO) {
 
         Order createdOrder = new Order();
 
@@ -26,5 +26,11 @@ public class OrderService {
 
         orderRepo.save(createdOrder);
 
+        return createdOrder;
+
+    }
+
+    public void updateOrderStatus(Order createdOrder) {
+        orderRepo.save(createdOrder);
     }
 }
