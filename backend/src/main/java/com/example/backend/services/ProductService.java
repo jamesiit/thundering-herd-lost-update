@@ -42,5 +42,11 @@ public class ProductService {
     }
 
 
+    public int getCurrentQuantity() {
+        Product product = productRepo.findById(1L).orElseThrow();
+
+        return product.getProdQuantity();
+
+    }
 }
 

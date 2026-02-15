@@ -28,13 +28,6 @@ public class OrderController {
         this.productService = productService;
     }
 
-    // for testing purposes, to check if endpoint works
-    @GetMapping("/")
-    public ResponseEntity<?> sayHello() {
-        return new ResponseEntity<>("Hi", HttpStatus.OK);
-    }
-
-
     @PostMapping("/")
     public ResponseEntity<?> handleOrder(@RequestBody OrderDTO orderDTO) {
 
@@ -62,8 +55,6 @@ public class OrderController {
             Thread.sleep(20);
 
             productService.decrementQuantity(orderDTO.getClientQuantity());
-
-            //write logic for decrementing. The below line is just so that the function compiles...
 
             createdOrder.setOrderStatus(OrderStatus.COMPLETED);
 
