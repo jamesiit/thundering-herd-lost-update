@@ -17,18 +17,14 @@ In a high-concurrency environment, the "Check-Then-Act" pattern creates a race c
 
 <img src="assets/swimlane.png"/>
 
-## ---
-
-**Tech Stack**
+## **Tech Stack**
 
 * **Backend:** Java Spring Boot
 * **Database:** MySQL
 * **Frontend:** React (for visual confirmation)
 * **Load Testing:** k6
 
-## ---
-
-**The Simulation Setup**
+## **The Simulation Setup**
 
 To accurately simulate this race condition on a single machine, the backend was tuned to handle a massive spike in concurrent requests without rejecting connections.
 
@@ -52,9 +48,7 @@ spring.datasource.hikari.maximum-pool-size\=50
 * **The Trigger:** A k6 script fires 1,000 concurrent requests.
 * **The Flaw:** A deliberate processing delay (simulating credit card validation/network latency) is placed between the **Read** and the **Update**.
 
-## ---
-
-**Results & Evidence**
+## **Results & Evidence**
 
 We ran the k6 script against the endpoint.
 
@@ -67,9 +61,7 @@ This proves that while the database integrity *seems* preserved (it didn't go ne
 
 <img src="assets/k6-test.png"/>
 
-## ---
-
-**How to Run**
+## **How to Run**
 
 1. **Clone the repo:**
 
