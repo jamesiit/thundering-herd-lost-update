@@ -4,11 +4,11 @@ import com.example.backend.dto.OrderDTO;
 
 import com.example.backend.model.Order;
 import com.example.backend.model.OrderStatus;
-import com.example.backend.model.Product;
 import com.example.backend.services.OrderService;
 import com.example.backend.services.ProductService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -33,28 +33,13 @@ public class OrderController {
 
         Map<String, HttpStatus> response = new HashMap<>();
 
+        // create order
+        Order createdOrder = orderService.createOrder(orderDTO);
+
         try {
 
-            Order createdOrder = orderService.createOrder(orderDTO);
-
-            Product product = productService.checkQuantity();
-
-            int getQuantity = product.getProdQuantity();
-
-            if (getQuantity <= 0) {
-
-                createdOrder.setOrderStatus(OrderStatus.FAILED);
-
-                orderService.updateOrderStatus(createdOrder);
-
-                return new ResponseEntity<>(response, HttpStatus.CONFLICT);
-
-            }
-
-            //simulate the order processing wait in real systems like a credit card check
-            Thread.sleep(20);
-
-            productService.decrementQuantity(orderDTO.getClientQuantity());
+            // read write logic is passed onto the productService
+            productService.processProduct(orderDTO.getClientQuantity());
 
             createdOrder.setOrderStatus(OrderStatus.COMPLETED);
 
@@ -63,8 +48,20 @@ public class OrderController {
             return new ResponseEntity<>(response, HttpStatus.OK);
 
 
-        } catch (Exception e) {
+        } catch (ObjectOptimisticLockingFailureException e) {
+            createdOrder.setOrderStatus(OrderStatus.FAILED);
+            orderService.updateOrderStatus(createdOrder);
 
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+
+        } catch (IllegalStateException e) {
+            createdOrder.setOrderStatus(OrderStatus.FAILED);
+            orderService.updateOrderStatus(createdOrder);
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+
+        } catch (Exception e) {
+            createdOrder.setOrderStatus(OrderStatus.FAILED);
+            orderService.updateOrderStatus(createdOrder);
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 
         }

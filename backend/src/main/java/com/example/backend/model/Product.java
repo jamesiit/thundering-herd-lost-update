@@ -16,6 +16,9 @@ public class Product {
     @Column(name = "prod_quantity")
     private int prodQuantity;
 
+    @Version
+    private Integer version;
+
     public Product(long prodId, String prodName, int prodQuantity) {
         this.prodId = prodId;
         this.prodName = prodName;
