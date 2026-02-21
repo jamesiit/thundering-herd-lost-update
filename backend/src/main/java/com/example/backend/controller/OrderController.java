@@ -48,18 +48,14 @@ public class OrderController {
             return new ResponseEntity<>(response, HttpStatus.OK);
 
 
-        } catch (ObjectOptimisticLockingFailureException e) {
-            createdOrder.setOrderStatus(OrderStatus.FAILED);
-            orderService.updateOrderStatus(createdOrder);
-
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-
         } catch (IllegalStateException e) {
+
             createdOrder.setOrderStatus(OrderStatus.FAILED);
             orderService.updateOrderStatus(createdOrder);
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
 
         } catch (Exception e) {
+
             createdOrder.setOrderStatus(OrderStatus.FAILED);
             orderService.updateOrderStatus(createdOrder);
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -68,4 +64,5 @@ public class OrderController {
 
 
     }
+
 }

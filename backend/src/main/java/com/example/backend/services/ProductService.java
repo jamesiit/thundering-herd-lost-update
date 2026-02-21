@@ -8,12 +8,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ProductService {
 
-    private final OrderService orderService;
     ProductRepo productRepo;
 
-    public ProductService(ProductRepo productRepo, OrderService orderService) {
+    public ProductService(ProductRepo productRepo) {
         this.productRepo = productRepo;
-        this.orderService = orderService;
     }
 
     //seeder methods
@@ -32,8 +30,7 @@ public class ProductService {
 
         // getting the product
 
-        Product product = productRepo.findById(1L).orElse(null);
-
+        Product product = productRepo.findByIdAndLock(1L);
 
         // business logic
 
@@ -52,9 +49,8 @@ public class ProductService {
         }
 
         // save product
-        product.setProdQuantity(product.getProdQuantity() - clientQuantity);
+        product.setProdQuantity( product.getProdQuantity() - clientQuantity);
         productRepo.save(product);
-
 
     }
 
