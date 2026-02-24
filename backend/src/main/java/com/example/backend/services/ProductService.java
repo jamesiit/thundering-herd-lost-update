@@ -3,7 +3,6 @@ package com.example.backend.services;
 import com.example.backend.model.Product;
 import com.example.backend.repo.ProductRepo;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProductService {
@@ -23,24 +22,11 @@ public class ProductService {
         return productRepo.findById(id).orElse(null);
     }
 
-    //service methods
+    //service method
 
-    @Transactional
     public void processProduct(int clientQuantity) {
 
-        // getting the product
-
-        Product product = productRepo.findByIdAndLock(1L);
-
-        // business logic
-
-        if (product.getProdQuantity() <= 0) {
-
-            throw new IllegalStateException();
-
-        }
-
-        // order processing wait ()
+        // order processing wait first (like credit card check)
         try {
             Thread.sleep(20);
         } catch (InterruptedException e) {
@@ -48,9 +34,11 @@ public class ProductService {
             throw new RuntimeException();
         }
 
-        // save product
-        product.setProdQuantity( product.getProdQuantity() - clientQuantity);
-        productRepo.save(product);
+        int count = productRepo.decrementProduct(clientQuantity, 1L);
+
+        if (count == 0) {
+            throw new IllegalStateException();
+        }
 
     }
 
