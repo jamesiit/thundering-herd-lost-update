@@ -1,43 +1,52 @@
-## Pessimistic Locking: The Thundering Herd Problem
+## Phase 3: Atomic Updates (Database-Level Concurrency)
 
 ### The Challenge
 
-While Optimistic Locking prevents data corruption, it suffers from "Retry Storms" where thousands of transactions are fully processed only to fail at the commit phase. This wastes significant CPU cycles on computation that is destined to be rolled back. We needed a mechanism that enforces strict serialization: First-Come, First-Served.
+While Pessimistic Locking successfully serialized requests, it introduced a new bottleneck: **Connection Pool Exhaustion**. By holding a database connection (and lock) during the entire transaction—including the simulated 20ms payment processing—we severely limited throughput. A pool of 50 connections meant a hard cap of 50 concurrent users, leaving 950 threads waiting in the application queue. We needed a strategy to release database connections immediately, even while "processing" the user.
 
-### The Solution: Pessimistic Locking
+### The Solution: Atomic Updates (Predicated Update)
 
-We implemented **JPA Pessimistic Locking** using the `PESSIMISTIC_WRITE` mode.
+We shifted from **Application-Level Locking** to **Database-Level Atomicity**. Instead of fetching the data to Java, checking it, and then saving it, we pushed the validation logic directly into the database engine using a **Predicated Update** (Guard Clause).
 
-* **Mechanism:** The database issues a `SELECT ... FOR UPDATE` query, placing an exclusive row lock on the target record immediately upon read.
-* **Queueing:** Subsequent transactions are halted at the database level until the lock is released or a timeout occurs.
-* **Safety Valve:** A `jakarta.persistence.lock.timeout` hint (3000ms) prevents infinite blocking during high contention.
+* **Mechanism:** A single JPQL query: 
+* `UPDATE Product p SET p.qty = p.qty - 1 WHERE p.id = :id AND p.qty > 0`.
+* **Inverted Workflow:**
+1. **Wait First:** The expensive logic (20ms sleep/payment) happens *purely in Java*, without holding any database connection.
+2. **Update Last:** The transaction opens only for the microseconds required to execute the single SQL update.
+
+
+* **Result:** The database connection is held for ~2ms instead of ~22ms.
 
 ### Performance Testing (k6)
 
 We stress-tested the endpoint with 1,000 concurrent Virtual Users (VUs) on an **AMD Ryzen 7 7700X** (8-core/16-thread).
 
 * **Target:** 1 Ticket Available.
-* **Result:** 1 Success (200 OK), 425 Logical Rejections (409 Conflict), 574 Network Bounces.
-* **Latency:** * **Average:** ~299ms
-* **Max:** ~825ms (Significantly lower than expected due to "Fail Fast" logic skipping the 20ms simulated delay).
+* **Result:** 1 Success (200 OK), 500 Logical Rejections (409 Conflict), ~499 Network Failures.
+* **Latency:**
+* **Average:** ~427ms
+* **Max:** ~1.14s (Due to network stack saturation).
 
 
 
-<img src="assets/k6-test-pessimistic-locking.png" alt="k6 pessimistic locking test results">
+<img src="assets/k6-test-atomic.png" alt="k6 atomic update test results">
 
-### Analysis: The "Double Queue" Bottleneck
+### Analysis: Hitting the "Speed of Light" (OS Limits)
 
-The test revealed a two-stage funnel architecture under extreme load:
+The test revealed a fascinating result: The application became **too fast for the Operating System's default network settings**.
 
-1. **Tomcat Queue (The Lobby):** Configured for 1,000 threads, successfully accepting traffic until OS-level TCP backlog limits were hit (causing the 574 network bounces).
-2. **HikariCP Funnel (The Choke Point):** With a pool size of 50, only 50 threads could compete for the lock at any given time.
-* **Outcome:** The remaining 425 threads queued inside the JVM, waiting for a connection. This acted as a natural throttle, preventing the database from being overwhelmed by 1,000 simultaneous lock requests.
+1. **Database Unlocked:** Because the database interaction was instantaneous, the application threads returned to the pool immediately, ready to accept more work.
+2. **The New Bottleneck (OS TCP Stack):** The server accepted requests faster than the OS could manage the incoming TCP handshake queue (Backlog).
+* **The "50/50" Split:** The server successfully processed ~500 requests (returning "Sold Out").
+* **The Drop:** The remaining ~500 requests hit the OS `syn_backlog` limit and were dropped before they even reached the JVM (Network Bounces).
 
 
 
-### Drawbacks of Pessimistic Locking
+* **Outcome:** We successfully eliminated the Database and Java Application as bottlenecks. The failure point shifted entirely to infrastructure configuration (OS TCP/IP tuning).
 
-* **Database Connection Exhaustion:** Unlike Optimistic locking, waiting threads hold onto a physical database connection while they wait for the lock. In a system with limited connections (e.g., max 50), a single locked row can starve the entire application, preventing other unrelated queries from running.
-* **Throughput Cap:** Access to the hot row is strictly serialized. The theoretical maximum throughput is `1 / (Transaction Time)`. If a transaction takes 20ms, the absolute maximum throughput is 50 requests/second, regardless of server hardware.
-* **Deadlock Risk:** If multiple resources are locked in different orders (e.g., Thread A locks Row 1 then Row 2, while Thread B locks Row 2 then Row 1), the application can enter a deadlock state, requiring database intervention to kill the connection.
-* **Latency Spikes:** For users at the back of the queue, response time is the sum of *all* preceding transactions. In a long queue without timeouts, the last user could face massive delays (e.g., 50 users * 20ms = 1 second wait).
+### Drawbacks of Atomic Updates
+
+* **"Black Hole" Failures:** As seen in the test, extreme throughput can overwhelm the OS network stack, leading to dropped packets where the client receives a generic "Connection Error" instead of a clean "Sold Out" message.
+* **Business Logic Limitations:** This strategy only works if the validation logic can be expressed in a single SQL `WHERE` clause (e.g., `qty > 0`). Complex rules (e.g., "User must not have bought a ticket in the last 24h AND is a VIP") are difficult or impossible to implement atomically without stored procedures.
+* **Zombie Inventory Risk:** If the server crashes *after* the atomic decrement but *before* the business logic (Wait/Payment) completes, the item remains "sold" in the database but the user never paid. This requires a background "cleanup" job to release stuck inventory.
+* **Opaque Failure:** The query simply returns `0 rows updated`. The application doesn't know *why* it failed (Product didn't exist? Quantity was 0? Database constrained?), requiring extra queries if detailed error messages are needed.

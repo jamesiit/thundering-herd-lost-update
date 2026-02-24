@@ -1,24 +1,16 @@
 package com.example.backend.repo;
 
 import com.example.backend.model.Product;
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.QueryHint;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface ProductRepo extends JpaRepository<Product, Long> {
 
-    //specify lock type
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-
-    // set the timeout. MySQL ignores this value but keeping it for good practice regardless
-    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000")})
-
-    //query logic
-    @Query("select p from Product p where p.prodId = :id")
-    Product findByIdAndLock(@Param("id") long id);
-
+    @Transactional
+    @Modifying
+    @Query("update Product p set p.prodQuantity = p.prodQuantity - :qty where p.prodId = :id and p.prodQuantity > 0")
+    int decrementProduct(@Param("qty") int clientQuantity, @Param("id") long prodId);
 }
