@@ -2,13 +2,10 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.OrderDTO;
 
-import com.example.backend.model.Order;
-import com.example.backend.model.OrderStatus;
-import com.example.backend.services.OrderService;
-import com.example.backend.services.ProductService;
+import io.awspring.cloud.sqs.operations.SqsTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -19,13 +16,12 @@ import java.util.Map;
 @CrossOrigin("http://localhost:5173/")
 public class OrderController {
 
-    private OrderService orderService;
-    private ProductService productService;
+    private final SqsTemplate sqsTemplate;
+    private final String queueName;
 
-
-    public OrderController(OrderService orderService, ProductService productService) {
-        this.orderService = orderService;
-        this.productService = productService;
+    public OrderController(SqsTemplate sqsTemplate, @Value("${my.sqs.queue.name}") String queueName) {
+        this.sqsTemplate = sqsTemplate;
+        this.queueName = queueName;
     }
 
     @PostMapping("/")
@@ -33,32 +29,21 @@ public class OrderController {
 
         Map<String, HttpStatus> response = new HashMap<>();
 
-        // create order
-        Order createdOrder = orderService.createOrder(orderDTO);
-
         try {
 
-            // read write logic is passed onto the productService
-            productService.processProduct(orderDTO.getClientQuantity());
+           sqsTemplate.send(queueName, orderDTO);
 
-            createdOrder.setOrderStatus(OrderStatus.COMPLETED);
+            System.out.println("Sent message to queue!");
 
-            orderService.updateOrderStatus(createdOrder);
+           return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
 
-            return new ResponseEntity<>(response, HttpStatus.OK);
+        }  catch (Exception e) {
 
-
-        } catch (IllegalStateException e) {
-
-            createdOrder.setOrderStatus(OrderStatus.FAILED);
-            orderService.updateOrderStatus(createdOrder);
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-
-        } catch (Exception e) {
-
-            createdOrder.setOrderStatus(OrderStatus.FAILED);
-            orderService.updateOrderStatus(createdOrder);
+            System.out.println("Something went wrong!");
+            
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+
+
 
         }
 
