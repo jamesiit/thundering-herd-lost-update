@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Component
 public class StoreState {
 
+    //give it an initial value for AtomicBoolean
     private final AtomicBoolean isSoldOut = new AtomicBoolean(false);
 
     //getter
