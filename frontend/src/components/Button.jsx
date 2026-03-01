@@ -42,7 +42,7 @@ export default function Button() {
         onSuccess: data => {
 
             return (
-                    toast.success("Success!", { id: 'fetched-data'})
+                    toast.success("Order received! You are in the queue", { id: 'fetched-data'})
             )
 
         },

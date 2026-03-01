@@ -2,6 +2,7 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.OrderDTO;
 
+import com.example.backend.state.StoreState;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -18,10 +19,12 @@ public class OrderController {
 
     private final SqsTemplate sqsTemplate;
     private final String queueName;
+    private final StoreState storeState;
 
-    public OrderController(SqsTemplate sqsTemplate, @Value("${my.sqs.queue.name}") String queueName) {
+    public OrderController(SqsTemplate sqsTemplate, @Value("${my.sqs.queue.name}") String queueName, StoreState storeState) {
         this.sqsTemplate = sqsTemplate;
         this.queueName = queueName;
+        this.storeState = storeState;
     }
 
     @PostMapping("/")
@@ -31,18 +34,22 @@ public class OrderController {
 
         try {
 
-           sqsTemplate.send(queueName, orderDTO);
+            if (storeState.checkIsSoldOut()) {
+                return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+            }
 
-            System.out.println("Sent message to queue!");
+            //this will serialize and attach the payload
+            sqsTemplate.send(queueName, orderDTO);
 
-           return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
+            System.out.println("Sent order: " + orderDTO.getUserId() + " to queue!");
 
-        }  catch (Exception e) {
+            return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
+
+        } catch (Exception e) {
 
             System.out.println("Something went wrong!");
-            
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 
 
         }
