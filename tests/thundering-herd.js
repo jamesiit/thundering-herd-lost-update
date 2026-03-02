@@ -37,9 +37,8 @@ export default function () {
           }
         )
 
-
     check(res, {
-            'status is 200 (BOUGHT / QUEUED)': (r) => r.status === 202,
+            'status is 202 (BOUGHT / QUEUED)': (r) => r.status === 202,
             'status is 409 (SOLD OUT)': (r) => r.status === 409,
             'status is 500 (CRASHED)': (r) => r.status === 500,
     });
@@ -47,8 +46,5 @@ export default function () {
     if (res.status !== 202 && res.status !== 409) {
         console.log(`Mystery Code: ${res.status} | Body: ${res.body}`);
     }
-
-
-
 
 }
