@@ -1,10 +1,10 @@
 package com.example.backend.services;
 
-import com.example.backend.dto.OrderDTO;
 import com.example.backend.model.Order;
-import com.example.backend.model.OrderStatus;
 import com.example.backend.repo.OrderRepo;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 public class OrderService {
@@ -15,22 +15,8 @@ public class OrderService {
         this.orderRepo = orderRepo;
     }
 
-    public Order createOrder(OrderDTO orderDTO) {
-
-        Order createdOrder = new Order();
-
-        createdOrder.setUserId(orderDTO.getUserId());
-        createdOrder.setOrderStatus(OrderStatus.PENDING);
-        createdOrder.setClientQuantity(orderDTO.getClientQuantity());
-        createdOrder.setClientTime(orderDTO.getClientTime());
-
-        orderRepo.save(createdOrder);
-
-        return createdOrder;
-
+    public Optional <Order> check(String userId)  {
+        return orderRepo.findByUserId(userId);
     }
 
-    public void updateOrderStatus(Order createdOrder) {
-        orderRepo.save(createdOrder);
-    }
 }

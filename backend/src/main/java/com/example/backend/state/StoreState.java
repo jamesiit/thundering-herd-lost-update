@@ -7,6 +7,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Component
 public class StoreState {
 
+    //we've come to that point in programming where you are dealing with hardware level operations...
+
     //give it an initial value for AtomicBoolean
     private final AtomicBoolean isSoldOut = new AtomicBoolean(false);
 
